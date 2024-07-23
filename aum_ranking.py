@@ -1,4 +1,3 @@
-
 import numpy as np
 import torch
 from torch.utils.data import Dataset
@@ -8,16 +7,20 @@ def assign_threshold_samples(num_examples, num_classes):
     threshold_sample_flags = np.zeros((num_examples,), dtype=np.uint8)
     num_threshold_samples = num_examples // (num_classes + 1)
     threshold_sample_flags[:num_threshold_samples] = 1
+    threshold_sample_flags[num_threshold_samples : 2 * num_threshold_samples] = 2
     np.random.shuffle(threshold_sample_flags)
-    return threshold_sample_flags
+    threshold_sample_flags_1 = (threshold_sample_flags == 1).astype(np.uint8)
+    threshold_sample_flags_2 = (threshold_sample_flags == 2).astype(np.uint8)
+    return threshold_sample_flags_1, threshold_sample_flags_2
 
 
 class ThresholdSamplesDataset(Dataset):
     """A Dataset wrapper that adds threshold samples."""
+
     def __init__(self, dataset, threshold_sample_flags):
         if not hasattr(dataset, "classes"):
             raise ValueError("dataset must have 'classes' attribute.")
-        
+
         self.dataset = dataset
         self.threshold_sample_flags = threshold_sample_flags
         self.classes = self.dataset.classes + ["fake_label"]
@@ -57,7 +60,9 @@ class AUM:
         assigned_logits = logits[torch.arange(batch_size), y]
 
         # Get the next highest logits
-        masked_logits = torch.scatter(logits, dim=1, index=y[..., None], value=-torch.inf)
+        masked_logits = torch.scatter(
+            logits, dim=1, index=y[..., None], value=-torch.inf
+        )
         largest_other_logits, _ = torch.max(masked_logits, dim=1)
 
         # Calculate the margins
@@ -68,7 +73,6 @@ class AUM:
         self.margin_totals[start:stop] += margins
 
         return self
-    
 
     @torch.inference_mode()
     def compute(self, epochs):
@@ -79,7 +83,7 @@ class AUM:
             epochs (int): The number of training epochs that have occurred.
         """
         return self.margin_totals / epochs
-    
+
     @torch.inference_mode()
     def reset(self):
         """
@@ -94,6 +98,17 @@ def compute_aum_threshold(aum_values, threshold_sample_flags, percentile=0.99):
 
 
 def flag_mislabeled_examples(aum_values, threshold_sample_flags, aum_threshold):
-    mislabeled_example_flags = (threshold_sample_flags == 0) & (aum_values <= aum_threshold)
-    mislabeled_example_flags = mislabeled_example_flags.astype(threshold_sample_flags.dtype)
+    mislabeled_example_flags = (threshold_sample_flags == 0) & (
+        aum_values <= aum_threshold
+    )
+    mislabeled_example_flags = mislabeled_example_flags.astype(
+        threshold_sample_flags.dtype
+    )
+    return mislabeled_example_flags
+
+
+def combine_mislabeled_examples(mislabeled_example_flags_1, mislabeled_example_flags_2):
+    mislabeled_example_flags = (
+        mislabeled_example_flags_1 | mislabeled_example_flags_2
+    ).astype(mislabeled_example_flags_1.dtype)
     return mislabeled_example_flags
