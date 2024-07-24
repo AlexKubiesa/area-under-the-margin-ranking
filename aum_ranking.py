@@ -15,7 +15,11 @@ def assign_threshold_samples(num_examples, num_classes):
 
 
 class ThresholdSamplesDataset(Dataset):
-    """A Dataset wrapper that adds threshold samples."""
+    """A Dataset wrapper used to identify mislabeled data.
+
+    Examples are returned as (x, y, index), and a subset of examples are returned with a new, fake label
+    instead of their original label.
+    """
 
     def __init__(self, dataset, threshold_sample_flags):
         if not hasattr(dataset, "classes"):
@@ -28,8 +32,8 @@ class ThresholdSamplesDataset(Dataset):
     def __getitem__(self, index):
         x, y = self.dataset[index]
         if self.threshold_sample_flags[index]:
-            return x, len(self.dataset.classes)
-        return x, y
+            y = len(self.dataset.classes)
+        return x, y, index
 
     def __len__(self):
         return len(self.dataset)
@@ -42,15 +46,16 @@ class AUM:
         self.reset()
 
     @torch.inference_mode()
-    def update(self, logits, y, start):
+    def update(self, logits, y, indexes):
         """
         Updates states with the ground truth labels and predictions.
 
         Args:
             pred (Tensor): Tensor of label predictions logits of shape (batch_size,
                 num_classes).
-            y (Tensor): Tensor of ground truth labels with shape (batch_size,).
-            start (int): Index of the first example within the dataset.
+            y (Tensor): Tensor of ground truth labels of shape (batch_size,).
+            indexes (Tensor): Tensor of example indexes within the dataset of shape
+                (batch_size,).
         """
         logits = logits.to(self.device)
         y = y.to(self.device)
@@ -69,10 +74,7 @@ class AUM:
         margins = assigned_logits - largest_other_logits
 
         # Accumulate the margin totals
-        stop = start + batch_size
-        self.margin_totals[start:stop] += margins
-
-        return self
+        self.margin_totals[indexes] += margins
 
     @torch.inference_mode()
     def compute(self, epochs):
