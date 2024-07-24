@@ -15,7 +15,8 @@ def assign_threshold_samples(num_examples, num_classes):
 
 
 class ThresholdSamplesDataset(Dataset):
-    """A Dataset wrapper used to identify mislabeled data.
+    """
+    A Dataset wrapper used to identify mislabeled data.
 
     Examples are returned as (x, y, index), and a subset of examples are returned with a new, fake label
     instead of their original label.
@@ -27,7 +28,7 @@ class ThresholdSamplesDataset(Dataset):
 
         self.dataset = dataset
         self.threshold_sample_flags = threshold_sample_flags
-        self.classes = self.dataset.classes + ["fake_label"]
+        self.classes = dataset.classes + ["fake_label"]
 
     def __getitem__(self, index):
         x, y = self.dataset[index]
