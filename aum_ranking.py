@@ -58,9 +58,6 @@ class AUM:
             indexes (Tensor): Tensor of example indexes within the dataset of shape
                 (batch_size,).
         """
-        logits = logits.to(self.device)
-        y = y.to(self.device)
-
         # Get the logits for the ground truth labels
         batch_size = y.shape[0]
         assigned_logits = logits[torch.arange(batch_size), y]
@@ -75,6 +72,8 @@ class AUM:
         margins = assigned_logits - largest_other_logits
 
         # Accumulate the margin totals
+        indexes = indexes.to(self.margin_totals.device)
+        margins = margins.to(self.margin_totals.device)
         self.margin_totals[indexes] += margins
 
     @torch.inference_mode()
