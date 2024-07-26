@@ -5,6 +5,16 @@ Original paper: https://arxiv.org/pdf/2001.10528v4
 
 This technique can be used to identify mislabeled or difficult samples in a dataset. These samples can then be relabeled or removed to improve the final performance of a model trained on the data.
 
+## Project structure
+
+- **identify_mislabeled_data.ipynb** is an example showing how to apply AUM Ranking to identify mislabeled samples in a dataset. It outputs TensorBoard logs to **runs/**, which can be viewed with `tensorboard --logdir runs/`.
+
+- **aum_ranking.py** contains all the code specific to AUM Ranking.
+
+- **models.py** defines the ResNet-32 model used in the AUM paper.
+
+- **test_aum_ranking.py** contains tests for **aum_ranking.py**.
+
 ## Setup
 
 ### 1. Virtual environment
@@ -31,10 +41,16 @@ pip install -r requirements_main.txt
 
 to install the remaining packages.
 
-## Project structure
+You should now be able to run `identify_mislabeled_data.ipynb`.
 
-- **identify_mislabeled_data.ipynb** is an example showing how to apply AUM Ranking to identify mislabeled samples in a dataset. It outputs TensorBoard logs to **runs/**, which can be viewed with `tensorboard --logdir runs/`.
+### 4. (Optional) Install dev packages
 
-- **aum_ranking.py** contains all the code specific to AUM Ranking.
+If you want to be able to run the tests, then run
 
-- **models.py** defines the ResNet-32 model used in the AUM paper.
+```
+pip install -r requirements_dev.txt
+```
+
+to install pytest.
+
+To run the tests, run the command `pytest .` (including the full stop).

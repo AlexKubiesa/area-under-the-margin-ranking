@@ -94,7 +94,7 @@ class AUM:
         self.margin_totals = torch.zeros((self.num_samples,), device=self.device)
 
 
-def compute_aum_threshold(aum_values, threshold_sample_flags, percentile=0.99):
+def compute_aum_threshold(aum_values, threshold_sample_flags, percentile=99):
     threshold_sample_aum_values = aum_values[threshold_sample_flags == 1]
     return np.percentile(threshold_sample_aum_values, percentile)
 
