@@ -3,9 +3,9 @@ import torch
 from torch.utils.data import Dataset
 
 
-def assign_threshold_samples(num_examples, num_classes):
-    threshold_sample_flags = np.zeros((num_examples,), dtype=np.uint8)
-    num_threshold_samples = num_examples // (num_classes + 1)
+def assign_threshold_samples(num_samples, num_classes):
+    threshold_sample_flags = np.zeros((num_samples,), dtype=np.uint8)
+    num_threshold_samples = num_samples // (num_classes + 1)
     threshold_sample_flags[:num_threshold_samples] = 1
     threshold_sample_flags[num_threshold_samples : 2 * num_threshold_samples] = 2
     np.random.shuffle(threshold_sample_flags)
@@ -18,7 +18,7 @@ class ThresholdSamplesDataset(Dataset):
     """
     A Dataset wrapper used to identify mislabeled data.
 
-    Examples are returned as (x, y, index), and a subset of examples are returned with a new, fake label
+    Samples are returned as (x, y, index), and a subset of samples are returned with a new, fake label
     instead of their original label.
     """
 
@@ -41,8 +41,8 @@ class ThresholdSamplesDataset(Dataset):
 
 
 class AUM:
-    def __init__(self, num_examples, device=None):
-        self.num_examples = num_examples
+    def __init__(self, num_samples, device=None):
+        self.num_samples = num_samples
         self.device = device
         self.reset()
 
@@ -55,7 +55,7 @@ class AUM:
             pred (Tensor): Tensor of label predictions logits of shape (batch_size,
                 num_classes).
             y (Tensor): Tensor of ground truth labels of shape (batch_size,).
-            indexes (Tensor): Tensor of example indexes within the dataset of shape
+            indexes (Tensor): Tensor of sample indexes within the dataset of shape
                 (batch_size,).
         """
         # Get the logits for the ground truth labels
@@ -91,7 +91,7 @@ class AUM:
         """
         Resets the state.
         """
-        self.margin_totals = torch.zeros((self.num_examples,), device=self.device)
+        self.margin_totals = torch.zeros((self.num_samples,), device=self.device)
 
 
 def compute_aum_threshold(aum_values, threshold_sample_flags, percentile=0.99):
@@ -99,18 +99,20 @@ def compute_aum_threshold(aum_values, threshold_sample_flags, percentile=0.99):
     return np.percentile(threshold_sample_aum_values, percentile)
 
 
-def flag_mislabeled_examples(aum_values, threshold_sample_flags, aum_threshold):
-    mislabeled_example_flags = (threshold_sample_flags == 0) & (
+def flag_mislabeled_samples(aum_values, threshold_sample_flags, aum_threshold):
+    mislabeled_sample_flags = (threshold_sample_flags == 0) & (
         aum_values <= aum_threshold
     )
-    mislabeled_example_flags = mislabeled_example_flags.astype(
+    mislabeled_sample_flags = mislabeled_sample_flags.astype(
         threshold_sample_flags.dtype
     )
-    return mislabeled_example_flags
+    return mislabeled_sample_flags
 
 
-def combine_mislabeled_examples(mislabeled_example_flags_1, mislabeled_example_flags_2):
-    mislabeled_example_flags = (
-        mislabeled_example_flags_1 | mislabeled_example_flags_2
-    ).astype(mislabeled_example_flags_1.dtype)
-    return mislabeled_example_flags
+def combine_mislabeled_sample_flags(
+    mislabeled_sample_flags_1, mislabeled_sample_flags_2
+):
+    mislabeled_sample_flags = (
+        mislabeled_sample_flags_1 | mislabeled_sample_flags_2
+    ).astype(mislabeled_sample_flags_1.dtype)
+    return mislabeled_sample_flags
